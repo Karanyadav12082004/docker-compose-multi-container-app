@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine        
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD=apppass
+      - POSTGRES_DB=appdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U appuser -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+       - db-data:/var/lib/postgresql/data
+
+  frontend:
+    
+    ports:
+     - "3000:3000"
+    build: ./frontend
+
+  backend:
+    
+    ports:
+      - "5000:5000"
+    build: ./backend
+    environment: 
+      - DATABASE_URL=postgres://appuser:apppass@db:5432/appdb
+    depends_on:
+      db:
+        condition: service_healthy
+  
+  nginx:
+    image: nginx:alpine                  # official nginx, alpine variant
+    ports:
+      - "80:80"               # host 80 → container 80
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro   # container ke andar ka path
+    depends_on:
+     - frontend
+     - backend
+
+volumes:
+  db-data:
+             
